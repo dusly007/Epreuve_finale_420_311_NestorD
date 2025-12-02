@@ -44,7 +44,7 @@ public class Action {
         String chaine = type.name();
         if (param1 != 0) chaine += ";" + param1;
         if (param2 != 0) chaine += ";" + param2;
-        if (!param3.isBlank()) chaine += ";" + param3;
+        if (param3 != null && !param3.isBlank()) chaine += ";" + param3;
         return chaine;
     }
 }
