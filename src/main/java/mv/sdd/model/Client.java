@@ -30,6 +30,7 @@ public class Client {
 
     public void diminuerPatience(int minutes) {
         // TODO: diminuer patience et passer à PARTI_FACHE si <= 0
+
     }
 
     public EtatClient getEtat() {
