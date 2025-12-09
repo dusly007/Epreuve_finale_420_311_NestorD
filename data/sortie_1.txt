@@ -1,4 +1,8 @@
 ========== RUSH AU RESTO ==========
 🍽️ Lecture des actions : data/scenario_1.txt
 
-===================================
+Service démarré avec une durée de 10 minutes et 1 cuisinier(s).
+[🚪 t=0] Client #1 "Alice" (pat=5)
+[📥 t=0] Cmd #1 (Alice) → Pizza
+[⏱ t=1] Temps avancé de 1 minute(s).
+[t=1] 👥 1 😋 0 😡 0 📥 1 🍳 0

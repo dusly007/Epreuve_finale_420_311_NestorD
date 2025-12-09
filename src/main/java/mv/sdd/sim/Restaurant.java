@@ -61,7 +61,7 @@ public class Restaurant {
 
         //un thread pour chaque cuisinier
         for (int i = 0; i < nbCuisiniers; i++) {
-            Thread cuisinierThread = new Thread(new Cuisinier(this, horloge));  // Création du thread Cuisinier
+            Thread cuisinierThread = new Thread(String.valueOf(new Cuisinier(this, horloge)));  // Création du thread Cuisinier
             cuisinierThread.start();
         }
         this.dureeMax = dureeMax;
@@ -84,7 +84,7 @@ public class Restaurant {
     // tick() avancer commande
     private void tick() {
         for (Commande commande : commandesEnPreparation) {
-            commande.decrementerTempsRestant();  // Réduit le temps restant de la commande
+            commande.decrementerTempsRestant();  // réduit temps
             if (commande.estTermineeParTemps()) {
                 marquerCommandeTerminee(commande);
             }
@@ -117,24 +117,40 @@ public class Restaurant {
         logger.logLine("[🚪 t=" + horloge.getTempsSimule() + "] Client #" + id + " \"" + nom + "\" (pat=" + patienceInitiale + ")");
     }
 
-    // Commande passerCommande(int idClient, MenuPlat codePlat)
+    public Plat creerPlat(MenuPlat menuPlat) {
+        switch (menuPlat) {
+            case PIZZA:
+                return new Plat(MenuPlat.PIZZA, "Pizza", 10, 8.5);
+            case BURGER:
+                return new Plat(MenuPlat.BURGER, "Burger", 8, 5.0);
+            case FRITES:
+                return new Plat(MenuPlat.FRITES, "Frites", 5, 2.5);
+            default:
+                throw new IllegalArgumentException("Plat inconnu : " + menuPlat);
+        }
+    }
+
     public void passerCommande(int idClient, String codePlat) {
         Client client = trouverClientParId(idClient);
         if (client == null) {
             logger.logLine("[🚪 t=" + horloge.getTempsSimule() + "] Client #" + idClient + " introuvable.");
             return;
         }
-        MenuPlat plat = MenuPlat.valueOf(codePlat);
-        Commande commande = client.getCommande();
-        if (commande == null) {
-            commande = new Commande(client, plat);
-            client.setCommande(commande);
-        } else {
-            commande.ajouterPlat(plat);
+
+        MenuPlat menuPlat;
+        try {
+            menuPlat = MenuPlat.valueOf(codePlat.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            logger.logLine("[🚪 t=" + horloge.getTempsSimule() + "] Plat inconnu : " + codePlat);
+            return;
         }
+
+        Plat plat = creerPlat(menuPlat);
+        Commande commande = new Commande(client, plat);  // Crée une commande avec le plat
         commandesEnFile.add(commande);
-        logger.logLine("[📥 t=" + horloge.getTempsSimule() + "] Cmd #" + commande.getId() + " (" + client.getNom() + ") → " + plat);
+        logger.logLine("[📥 t=" + horloge.getTempsSimule() + "] Cmd #" + commande.getId() + " (" + client.getNom() + ") → " + plat.getNom());
     }
+
 
     // retirerProchaineCommande(): Commande
     // marquerCommandeTerminee(Commande commande)
@@ -155,8 +171,8 @@ public class Restaurant {
 
     // Commande creerCommandePourClient(Client client)
     public Commande creerCommandePourClient(Client client) {
-        // Créer et ajouter une nouvelle commande pour le client
-        Commande commande = new Commande(client, MenuPlat.PIZZA); // Exemple avec une pizza
+        Plat plat = new Plat(MenuPlat.PIZZA, "Pizza", 10, 8.5);  // Par défaut, créer une pizza
+        Commande commande = new Commande(client, plat);
         commandesEnFile.add(commande);
         return commande;
     }
@@ -174,7 +190,7 @@ public class Restaurant {
         for (Client client : clients) {
             client.diminuerPatience(minutes);
             if (client.getPatience() <= 0) {
-                client.setEtat(EtatClient.PARTI_FACHE);  // Client énervé si patience = 0
+                client.setEtat(EtatClient.PARTI_FACHE);
             }
         }
     }

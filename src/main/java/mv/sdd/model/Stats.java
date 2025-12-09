@@ -45,20 +45,28 @@ public class Stats {
     }
 
     // TODO : ajouter incrementerVentesParPlat(MenuPlat codePlat) et autres méthodes au besoin
+    public void incrementerVentesParPlat(MenuPlat plat) {
+        ventesParPlat.put(plat, ventesParPlat.getOrDefault(plat, 0) + 1);
+    }
 
     public String toString() {
-        String chaine = String.format(
-                Constantes.STATS_GENERAL,
-                horloge.getTempsSimule(),
-                totalClients,
-                nbServis,
-                nbFaches,
-                chiffreAffaires
+        StringBuilder chaine = new StringBuilder(
+                String.format(
+                        Constantes.STATS_GENERAL,
+                        horloge.getTempsSimule(),
+                        totalClients,
+                        nbServis,
+                        nbFaches,
+                        chiffreAffaires
+                )
         );
-
         // TODO : ajouter le code pour concaténer avec statsPlatLines les lignes des quantités vendus par plat (à l'aide de ventesParPlat),
+        for (Map.Entry<MenuPlat, Integer> entry : ventesParPlat.entrySet()) {
+            chaine.append(statsPlatLine(entry.getKey(), entry.getValue()));
+        }
+
         //  sachant que la méthode statsPlatLine sert à formater une ligne et retourne une chaine
 
-        return chaine;
+        return chaine.toString();
     }
 }
