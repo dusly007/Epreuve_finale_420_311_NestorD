@@ -72,13 +72,13 @@ public class Commande {
     // TODO : Ajoutez la méthode decrementerTempsRestant
     public void decrementerTempsRestant(int minutes) {
         if (etat == EtatCommande.EN_PREPARATION) {
-            tempsRestant -= minutes;
-            if (tempsRestant <= 0) {
-                tempsRestant = 0;
+            tempsRestant = Math.max(0, tempsRestant - minutes);
+            if (tempsRestant == 0) {
                 etat = EtatCommande.PRETE;
             }
         }
     }
+
 
     // TODO : Ajoutez la méthode estTermineeParTemps
     public boolean estTermineeParTemps() {

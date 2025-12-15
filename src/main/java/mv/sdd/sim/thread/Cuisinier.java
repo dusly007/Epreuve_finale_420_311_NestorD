@@ -5,6 +5,7 @@ import mv.sdd.sim.Restaurant;
 import mv.sdd.model.Commande;
 
 public class Cuisinier implements Runnable {
+
     private final Restaurant restaurant;
 
     public Cuisinier(Restaurant restaurant) {
@@ -14,21 +15,32 @@ public class Cuisinier implements Runnable {
     @Override
     public void run() {
         while (restaurant.getServiceActif().get()) {
-            Commande cmd = restaurant.retirerProchaineCommande();
-            if (cmd != null && cmd.getTempsRestant() > 0) {
-                cmd.demarrerPreparation();
-                restaurant.getEnPreparation().add(cmd);
-                restaurant.getLogger().logLine(String.format(
-                        "[🍳 t=%d] Cmd #%d commence (%d min)",
+            Commande commande = restaurant.retirerProchaineCommande();
+
+            if (commande != null && commande.getTempsRestant() > 0) {
+                demarrerCommande(commande);
+            }
+
+            attendre(10); // Pause courte pour éviter de monopoliser le CPU
+        }
+    }
+
+    private void demarrerCommande(Commande commande) {
+        commande.demarrerPreparation();
+        restaurant.getEnPreparation().add(commande);
+        restaurant.getLogger().logLine(
+                String.format("[🍳 t=%d] Cmd #%d commence (%d min)",
                         restaurant.getHorloge().getTempsSimule(),
-                        cmd.getId(), cmd.getTempsRestant()));
-            }
-            try {
-                Thread.sleep(10);  // Très réactif
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
-            }
+                        commande.getId(),
+                        commande.getTempsRestant())
+        );
+    }
+
+    private void attendre(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 }

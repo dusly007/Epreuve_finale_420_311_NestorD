@@ -55,8 +55,7 @@ public class Restaurant {
     public void demarrerService(int dureeMax, int nbCuisiniers) {
         // Votre code ici.
         serviceActif.set(true);
-        logger.logLine(String.format(Constantes.DEMARRER_SERVICE, dureeMax, nbCuisiniers));
-
+        logger.logLine(String.format("[⏱️] Service = %d min, 👨‍🍳 = %d", dureeMax, nbCuisiniers));
         threadCuisinier = new Thread(new Cuisinier(this), "Cuisinier");
         threadCuisinier.start();
     }
@@ -65,13 +64,16 @@ public class Restaurant {
         // Votre code ici.
         logger.logLine(String.format("%s%d", Constantes.AVANCER_TEMPS, minutes));
         for (int i = 0; i < minutes; i++) {
+            horloge.avancerTempsSimule(1);
             tick();
         }
-        horloge.avancerTempsSimule(minutes);
     }
 
     public void arreterService(){
         // Votre code ici.
+        if (!serviceActif.get()) {
+            return;  //si service terminé -> ne fais rien
+        }
         serviceActif.set(false);  // Arrête le cuisinier
         logger.logLine(String.format("[⏱️ t=%d] Service terminé.", horloge.getTempsSimule()));
 
@@ -88,21 +90,7 @@ public class Restaurant {
     // TODO : Déclarer et implémenter les méthodes suivantes
     // tick() avancer commande
     public void tick() {
-        // 1. Progresser commandes en préparation
-        synchronized (enPreparation) {
-            for (Iterator<Commande> it = enPreparation.iterator(); it.hasNext(); ) {
-                Commande cmd = it.next();
-                cmd.decrementerTempsRestant(1);
-                if (cmd.estTermineeParTemps()) {
-                    marquerCommandeTerminee(cmd);
-                    it.remove();
-                    logger.logLine(String.format("[✅ t=%d] Cmd #%d terminée → %s 😋",
-                            horloge.getTempsSimule(), cmd.getId(), cmd.getClient().getNom()));
-                }
-            }
-        }
-
-        // 2. Diminuer patience clients en attente
+        // 1. Diminuer la patience des clients avant tout (car chaque minute passe)
         synchronized (clients) {
             for (Client client : clients.values()) {
                 if (client.getEtat() == EtatClient.EN_ATTENTE) {
@@ -114,7 +102,20 @@ public class Restaurant {
                 }
             }
         }
+
+        // 2. Faire progresser les commandes en préparation
+        synchronized (enPreparation) {
+            for (Iterator<Commande> it = enPreparation.iterator(); it.hasNext();) {
+                Commande cmd = it.next();
+                cmd.decrementerTempsRestant(1);
+                if (cmd.estTermineeParTemps()) {
+                    marquerCommandeTerminee(cmd);
+                    it.remove();
+                }
+            }
+        }
     }
+
 
 
     // afficherEtat()
@@ -189,6 +190,10 @@ public class Restaurant {
 
     // marquerCommandeTerminee(Commande commande)
     public void marquerCommandeTerminee(Commande commande) {
+        if (commande.getEtat() == EtatCommande.LIVREE) {
+            return;
+        }
+
         commande.setEtat(EtatCommande.LIVREE);
         Client client = commande.getClient();
         client.setEtat(EtatClient.SERVI);

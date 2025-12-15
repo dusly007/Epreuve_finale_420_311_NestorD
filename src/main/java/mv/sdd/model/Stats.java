@@ -60,11 +60,10 @@ public class Stats {
                 totalClients,
                 nbServis,
                 nbFaches,
-                chiffreAffaires  // ✅ double DIRECT, pas de String.format()
+                chiffreAffaires
         );
-        chaine += "\n\tPlats vendus :";
-        for (Map.Entry<MenuPlat, Integer> entry : ventesParPlat.entrySet()) {
-            chaine += statsPlatLine(entry.getKey(), entry.getValue());
+        for (MenuPlat plat : MenuPlat.values()) {
+            chaine += statsPlatLine(plat, ventesParPlat.get(plat));
         }
         return chaine;
     }

@@ -66,11 +66,11 @@ public final class Formatter {
         String platsStr = "";
         if (commande != null && commande.getPlats() != null) {
             for (MenuPlat plat : commande.getPlats()) {
-                platsStr += emojiPlat(plat);
+                platsStr += " " + emojiPlat(plat);
             }
         }
         platsStr = platsStr.trim();
-        return String.format("#%d %s %s (pat=%d, %s)",
+        return String.format(" #%d %s %s (pat=%d, %s)",
                 client.getId(),
                 client.getNom(),
                 emojiEtatClient(client.getEtat()),
