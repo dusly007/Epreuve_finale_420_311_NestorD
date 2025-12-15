@@ -1,9 +1,6 @@
 package mv.sdd.utils;
 
-import mv.sdd.model.Client;
-import mv.sdd.model.EtatClient;
-import mv.sdd.model.MenuPlat;
-import mv.sdd.model.Stats;
+import mv.sdd.model.*;
 
 public final class Formatter {
 
@@ -63,12 +60,24 @@ public final class Formatter {
      * "    #1 Alice 🙂 (pat=4, 🍕)"
      *
      * @param client client à afficher
-     * @param codePlat représentation des plats
      */
-    public static String clientLine(Client client, MenuPlat codePlat) {
+    public static String clientLine(Client client, Commande commande) {
         // TODO: à implémenter
-        return null;
+        String platsStr = "";
+        if (commande != null && commande.getPlats() != null) {
+            for (MenuPlat plat : commande.getPlats()) {
+                platsStr += emojiPlat(plat);
+            }
+        }
+        platsStr = platsStr.trim();
+        return String.format("#%d %s %s (pat=%d, %s)",
+                client.getId(),
+                client.getNom(),
+                emojiEtatClient(client.getEtat()),
+                client.getPatience(),
+                platsStr.isEmpty() ? "-" : platsStr);
     }
+
 
     // ---------- Lignes événements ---------- //
     public static String eventArriveeClient(int temps, Client client) {
@@ -91,7 +100,7 @@ public final class Formatter {
     }
 
     public static String eventCommandeDebut(int temps, int idCommande, int duree) {
-        return String.format(Constantes.EVENT_CMD_DEBUT, idCommande,duree );
+        return String.format("[🍳 t=%d] Cmd #%d commence (%d min)", temps, idCommande, duree);
     }
 
     public static String eventCommandeTerminee(int temps, int idCommande, Client client) {

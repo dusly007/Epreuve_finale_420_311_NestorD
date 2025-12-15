@@ -3,195 +3,226 @@ package mv.sdd.sim;
 import mv.sdd.io.Action;
 import mv.sdd.model.*;
 import mv.sdd.sim.thread.Cuisinier;
+import mv.sdd.utils.Constantes;
 import mv.sdd.utils.Logger;
+import mv.sdd.utils.Formatter;
+import mv.sdd.io.ActionType;
+import java.util.Comparator;
 
-import java.util.ArrayList;
-import java.util.List;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Restaurant {
     private final Logger logger;
     // TODO : Ajouter les attributs nécessaires ainsi que les getters et les setters
-    private final List<Client> clients = new ArrayList<>();
-    private final List<Commande> commandesEnFile = new ArrayList<>();
-    private final List<Commande> commandesEnPreparation = new ArrayList<>();
-    private Horloge horloge;
-    private Stats stats;
-    private int dureeMax;
+    private final Horloge horloge = new Horloge();
+    private final Map<Integer, Client> clients = new HashMap<>();
+    private final Queue<Commande> fileCommandes = new ConcurrentLinkedQueue<>(); //file attente
+    private final List<Commande> enPreparation = Collections.synchronizedList(new ArrayList<>()); //en preparation
+    private final Stats stats = new Stats(horloge);
+    private Thread threadCuisinier;
+    private final AtomicBoolean serviceActif = new AtomicBoolean(false); //apres mes recherche sa rend lecture/ecriture indivisible
 
     // TODO : Ajouter le(s) constructeur(s)
     public Restaurant(Logger logger) {
         this.logger = logger;
     }
 
+    public AtomicBoolean getServiceActif() { return serviceActif; }
+    public Horloge getHorloge() { return horloge; }
+    public Queue<Commande> getFileCommandes() { return fileCommandes; }
+    public List<Commande> getEnPreparation() { return enPreparation; }
+    public Logger getLogger() { return logger; }
+
+
     // TODO : implémenter les méthodes suivantes
     // Méthode appelée depuis App pour chaque action
-    public void executerAction(Action action){
+    public synchronized void executerAction(Action action) {
         switch (action.getType()) {
-            case DEMARRER_SERVICE:
-                demarrerService(action.getParam1(), action.getParam2());
-                break;
-            case AVANCER_TEMPS:
-                avancerTemps(action.getParam1());
-                break;
-            case AJOUTER_CLIENT:
-                ajouterClient(action.getParam1(), action.getParam3(), action.getParam2());
-                break;
-            case PASSER_COMMANDE:
-                passerCommande(action.getParam1(), action.getParam3());
-                break;
-            case AFFICHER_ETAT:
-                afficherEtat();
-                break;
-            case AFFICHER_STATS:
-                afficherStatistiques();
-                break;
-            case QUITTER:
-                arreterService();
-                break;
-            default:
-                throw new IllegalArgumentException("Action inconnue : " + action.getType());
+            case DEMARRER_SERVICE -> demarrerService(action.getParam1(), action.getParam2());
+            case AJOUTER_CLIENT -> ajouterClient(action.getParam1(), action.getParam3(), action.getParam2());
+            case PASSER_COMMANDE -> passerCommande(action.getParam1(), action.getParam3());
+            case AVANCER_TEMPS -> avancerTemps(action.getParam1());
+            case AFFICHER_ETAT -> afficherEtat();
+            case AFFICHER_STATS -> afficherStatistiques();
+            case QUITTER -> arreterService();
         }
     }
 
+
     public void demarrerService(int dureeMax, int nbCuisiniers) {
         // Votre code ici.
-        this.horloge = new Horloge();
-        this.stats = new Stats(horloge);
-        logger.logLine("Service démarré avec une durée de " + dureeMax + " minutes et " + nbCuisiniers + " cuisinier(s).");
+        serviceActif.set(true);
+        logger.logLine(String.format(Constantes.DEMARRER_SERVICE, dureeMax, nbCuisiniers));
 
-        //un thread pour chaque cuisinier
-        for (int i = 0; i < nbCuisiniers; i++) {
-            Thread cuisinierThread = new Thread(String.valueOf(new Cuisinier(this, horloge)));  // Création du thread Cuisinier
-            cuisinierThread.start();
-        }
-        this.dureeMax = dureeMax;
+        threadCuisinier = new Thread(new Cuisinier(this), "Cuisinier");
+        threadCuisinier.start();
     }
 
     public void avancerTemps(int minutes) {
         // Votre code ici.
-        horloge.avancerTempsSimule(minutes);  // Avancer l'horloge
-        logger.logLine("[⏱ t=" + horloge.getTempsSimule() + "] Temps avancé de " + minutes + " minute(s).");
-        diminuerPatienceClients(minutes);  // Diminuer la patience des clients
-        tick();  // Vérifier les commandes en préparation
+        logger.logLine(String.format("%s%d", Constantes.AVANCER_TEMPS, minutes));
+        for (int i = 0; i < minutes; i++) {
+            tick();
+        }
+        horloge.avancerTempsSimule(minutes);
     }
 
     public void arreterService(){
         // Votre code ici.
-        logger.logLine("[❌ t=" + horloge.getTempsSimule() + "] Service terminé.");
+        serviceActif.set(false);  // Arrête le cuisinier
+        logger.logLine(String.format("[⏱️ t=%d] Service terminé.", horloge.getTempsSimule()));
+
+        if (threadCuisinier != null && threadCuisinier.isAlive()) {
+            try {
+                threadCuisinier.join(1000);  //1s max
+            } catch (InterruptedException e) {
+                threadCuisinier.interrupt();
+            }
+        }
+        logger.logLine(Constantes.FOOTER_APP);
     }
 
     // TODO : Déclarer et implémenter les méthodes suivantes
     // tick() avancer commande
-    private void tick() {
-        for (Commande commande : commandesEnPreparation) {
-            commande.decrementerTempsRestant();  // réduit temps
-            if (commande.estTermineeParTemps()) {
-                marquerCommandeTerminee(commande);
+    public void tick() {
+        // 1. Progresser commandes en préparation
+        synchronized (enPreparation) {
+            for (Iterator<Commande> it = enPreparation.iterator(); it.hasNext(); ) {
+                Commande cmd = it.next();
+                cmd.decrementerTempsRestant(1);
+                if (cmd.estTermineeParTemps()) {
+                    marquerCommandeTerminee(cmd);
+                    it.remove();
+                    logger.logLine(String.format("[✅ t=%d] Cmd #%d terminée → %s 😋",
+                            horloge.getTempsSimule(), cmd.getId(), cmd.getClient().getNom()));
+                }
+            }
+        }
+
+        // 2. Diminuer patience clients en attente
+        synchronized (clients) {
+            for (Client client : clients.values()) {
+                if (client.getEtat() == EtatClient.EN_ATTENTE) {
+                    client.diminuerPatience(1);
+                    if (client.getEtat() == EtatClient.PARTI_FACHE) {
+                        stats.incrementerNbFaches();
+                        logger.logLine(Formatter.eventClientFache(horloge.getTempsSimule(), client));
+                    }
+                }
             }
         }
     }
 
+
     // afficherEtat()
     public void afficherEtat() {
-        logger.logLine("[t=" + horloge.getTempsSimule() + "] 👥 " + clients.size() +
-                " 😋 " + clients.stream().filter(c -> c.getEtat() == EtatClient.SERVI).count() +
-                " 😡 " + clients.stream().filter(c -> c.getEtat() == EtatClient.PARTI_FACHE).count() +
-                " 📥 " + commandesEnFile.size() +
-                " 🍳 " + commandesEnPreparation.size());
+        int nbClientsPresents = (int) clients.values().stream()
+                .filter(c -> c.getEtat() != EtatClient.PARTI_FACHE).count();
+        long nbServis = clients.values().stream().filter(c -> c.getEtat() == EtatClient.SERVI).count();
+        long nbFaches = clients.values().stream().filter(c -> c.getEtat() == EtatClient.PARTI_FACHE).count();
 
-        for (Client client : clients) {
-            logger.logLine("#" + client.getId() + " " + client.getNom() + " " +
-                    client.getEtat() + " (pat=" + client.getPatience() + ", " + client.getCommande().getPlats() + ")");
+        logger.logLine(Formatter.resumeEtat(
+                horloge.getTempsSimule(),
+                nbClientsPresents,
+                (int) nbServis,
+                (int) nbFaches,
+                fileCommandes.size(),
+                enPreparation.size()
+        ));
+
+        // Une ligne par client
+        synchronized (clients) {
+            clients.values().stream()
+                    .filter(c -> c.getEtat() != EtatClient.PARTI_FACHE)
+                    .sorted(Comparator.comparingInt(Client::getId))
+                    .forEach(c -> logger.logLine(Formatter.clientLine(c, c.getCommande())));
         }
     }
 
     // afficherStatistiques()
     public void afficherStatistiques() {
-        logger.logLine("[📈 t=" + horloge.getTempsSimule() + "] " + stats.toString());
+        logger.logLine(Constantes.HEADER_AFFICHER_STATS);
+        logger.logLine(stats.toString());
     }
 
     // Client ajouterClient(int id, String nom, int patienceInitiale)
-    public void ajouterClient(int id, String nom, int patienceInitiale) {
+    public Client ajouterClient(int id, String nom, int patienceInitiale) {
         Client client = new Client(id, nom, patienceInitiale);
-        clients.add(client);  // Ajoute le client à la liste
-        logger.logLine("[🚪 t=" + horloge.getTempsSimule() + "] Client #" + id + " \"" + nom + "\" (pat=" + patienceInitiale + ")");
-    }
-
-    public Plat creerPlat(MenuPlat menuPlat) {
-        switch (menuPlat) {
-            case PIZZA:
-                return new Plat(MenuPlat.PIZZA, "Pizza", 10, 8.5);
-            case BURGER:
-                return new Plat(MenuPlat.BURGER, "Burger", 8, 5.0);
-            case FRITES:
-                return new Plat(MenuPlat.FRITES, "Frites", 5, 2.5);
-            default:
-                throw new IllegalArgumentException("Plat inconnu : " + menuPlat);
+        synchronized (clients) {
+            clients.put(id, client);
         }
-    }
-
-    public void passerCommande(int idClient, String codePlat) {
-        Client client = trouverClientParId(idClient);
-        if (client == null) {
-            logger.logLine("[🚪 t=" + horloge.getTempsSimule() + "] Client #" + idClient + " introuvable.");
-            return;
-        }
-
-        MenuPlat menuPlat;
-        try {
-            menuPlat = MenuPlat.valueOf(codePlat.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            logger.logLine("[🚪 t=" + horloge.getTempsSimule() + "] Plat inconnu : " + codePlat);
-            return;
-        }
-
-        Plat plat = creerPlat(menuPlat);
-        Commande commande = new Commande(client, plat);  // Crée une commande avec le plat
-        commandesEnFile.add(commande);
-        logger.logLine("[📥 t=" + horloge.getTempsSimule() + "] Cmd #" + commande.getId() + " (" + client.getNom() + ") → " + plat.getNom());
+        stats.incrementerTotalClients();
+        logger.logLine(Formatter.eventArriveeClient(horloge.getTempsSimule(), client));
+        return client;
     }
 
 
+
+    public Commande passerCommande(int idClient, String codePlat) {
+        MenuPlat plat = MenuPlat.valueOf(codePlat);
+        Client client;
+        synchronized (clients) {
+            client = clients.get(idClient);
+        }
+        if (client == null || client.getEtat() != EtatClient.EN_ATTENTE) return null;
+
+        Commande commande = client.getCommande();
+        if (commande == null) {
+            commande = new Commande(client);
+            client.setCommande(commande);
+            commande.ajouterPlat(plat);
+            fileCommandes.add(commande);
+            logger.logLine(Formatter.eventCommandeCree(
+                    horloge.getTempsSimule(), commande.getId(), client, plat));
+        } else {
+            commande.ajouterPlat(plat);
+        }
+        return commande;
+    }
     // retirerProchaineCommande(): Commande
+    public Commande retirerProchaineCommande() {
+        return fileCommandes.poll();
+    }
+
     // marquerCommandeTerminee(Commande commande)
-    private void marquerCommandeTerminee(Commande commande) {
-        commandesEnPreparation.remove(commande);
+    public void marquerCommandeTerminee(Commande commande) {
         commande.setEtat(EtatCommande.LIVREE);
+        Client client = commande.getClient();
+        client.setEtat(EtatClient.SERVI);
         stats.incrementerNbServis();
         stats.incrementerChiffreAffaires(commande.calculerMontant());
-        logger.logLine("[✅ t=" + horloge.getTempsSimule() + "] Cmd #" + commande.getId() + " livrée.");
+        for (MenuPlat plat : commande.getPlats()) {
+            stats.incrementerVentesParPlat(plat);
+        }
+        logger.logLine(Formatter.eventCommandeTerminee(
+                horloge.getTempsSimule(), commande.getId(), client));
     }
+
 
     // Client creerClient(String nom, int patienceInitiale)
     public Client creerClient(String nom, int patienceInitiale) {
-        Client client = new Client(clients.size() + 1, nom, patienceInitiale);
-        clients.add(client);
+        int id = (int) clients.keySet().stream().mapToInt(Integer::intValue).max().orElse(0) + 1;        Client client = new Client(id, nom, patienceInitiale);
+        synchronized (clients) {
+            clients.put(id, client);
+        }
         return client;
     }
 
     // Commande creerCommandePourClient(Client client)
     public Commande creerCommandePourClient(Client client) {
-        Plat plat = new Plat(MenuPlat.PIZZA, "Pizza", 10, 8.5);  // Par défaut, créer une pizza
-        Commande commande = new Commande(client, plat);
-        commandesEnFile.add(commande);
-        return commande;
+        return new Commande(client);
     }
+
 
     // TODO : implémenter d'autres sous-méthodes qui seront appelées par les méthodes principales
     // Trouver un client par son ID
-    private Client trouverClientParId(int id) {
-        return clients.stream().filter(client -> client.getId() == id).findFirst().orElse(null);
-    }
 
     //  pour améliorer la lisibilité des méthodes en les découpant au besoin (éviter les trés longues méthodes)
     //  exemple : on peut avoir une méthode diminuerPatienceClients()
     //  qui permet de diminuer la patience des clients (appelée par tick())
-    private void diminuerPatienceClients(int minutes) {
-        for (Client client : clients) {
-            client.diminuerPatience(minutes);
-            if (client.getPatience() <= 0) {
-                client.setEtat(EtatClient.PARTI_FACHE);
-            }
-        }
-    }
+
+
 }

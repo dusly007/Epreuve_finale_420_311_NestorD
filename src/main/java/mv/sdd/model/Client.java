@@ -30,11 +30,12 @@ public class Client {
 
     public void diminuerPatience(int minutes) {
         // TODO: diminuer patience et passer à PARTI_FACHE si <= 0
-        this.patience -= minutes;
-        if (this.patience <= 0) {
-            this.etat = EtatClient.PARTI_FACHE;  // Si la patience atteint 0, le client part fâché
+        if (etat != EtatClient.EN_ATTENTE) return;
+        patience -= minutes;
+        if (patience <= 0) {
+            patience = 0;
+            etat = EtatClient.PARTI_FACHE;
         }
-
     }
 
     public EtatClient getEtat() {
