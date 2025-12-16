@@ -15,7 +15,7 @@ import java.util.List;
  * 420-311 : STRUCTURE DE DONNÉES
  * ÉPREUVE FINALE : VOLET 1
  *
- * @author VOTRE NOM ET PRENOM
+ * @author Nestor Dusly
  */
 public class App {
     public static void main( String[] args ) {

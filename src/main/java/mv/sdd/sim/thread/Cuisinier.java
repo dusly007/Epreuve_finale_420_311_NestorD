@@ -21,7 +21,7 @@ public class Cuisinier implements Runnable {
                 demarrerCommande(commande);
             }
 
-            attendre(10); // Pause courte pour éviter de monopoliser le CPU
+            attendre(10); // petite pause
         }
     }
 

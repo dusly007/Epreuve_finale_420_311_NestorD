@@ -16,11 +16,6 @@ public class Commande {
     // private final <Votre structure de choix adéquat> plats
     private final List<MenuPlat> plats = new ArrayList<>();
 
-
-
-
-
-
     // TODO : Ajout du ou des constructeur(s) nécessaires ou compléter au besoin
     public Commande(Client client) {
         this.id = ++nbCmd;

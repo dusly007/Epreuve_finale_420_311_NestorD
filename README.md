@@ -1,113 +1,85 @@
-# Épreuve finale – Simulation de restaurant (Structures de données & Threads)
+# Rush au resto – Épreuve finale 420-311 ✅ **TERMINE**
 
-Ce dépôt contient le **squelette de code** pour le premier volet de l’épreuve finale du cours de **Structures de données**.
+**Projet Java console simulant un restaurant pendant le rush de midi.**  
+**Note : Projet complet et fonctionnel, testé avec les scénarios fournis.**
 
-## 1. Objectif
-L’objectif est de développer une application **Java (console)** qui simule le service dans un petit restaurant pendant un “rush” de midi :
+## 📋 Informations étudiantes
 
-- des clients arrivent, passent commande, attendent leurs plats 🍕 ;
-- un cuisinier prépare les commandes dans un **thread séparé** ;
-- les clients sont soit servis 😋, soit repartent fâchés 😡 si leur patience tombe à 0 ;
-- toutes les actions sont lues depuis un **fichier texte** ;
-- toute la sortie est écrite dans un **fichier de logs**.
+- **Nom** : Dusly Nestor
+- **DA** : 2395223
+- **Cours** : 420-311 – Structures de données
+- **Enseignant(e)** : Sara Boumehraz
+- **Date de remise** : 16 décembre 2025
 
-L’énoncé complet de l’épreuve (contexte, règles, format exact des sorties) est fourni séparément par l’enseignant·e.
+##  Objectif 
+
+L'application simule complètement le service d'un restaurant :  
+  -Clients arrivent avec patience limitée  
+  -Commandes multi-plats (PIZZA🍕, BURGER🍔, FRITES🍟)  
+  -**Thread Cuisinier** concurrent prenant les commandes en file  
+  -Temps simulé avec `tick()` (patience ↓, préparation ↓)  
+  -Clients servis 😋 ou partis fâchés 😡  
+  -**Stats complètes** : CA, clients servis/fâchés, plats vendus  
+  -**Sortie 100% conforme** au format demandé (fichier logs)
+
+## Architecture implémentée
+
+mv.sdd/
+├── App.java # Point d'entrée 
+├── io/ # Lecture actions 
+│ ├── ActionFileReader.java
+│ ├── ActionParser.java
+│ └── ActionType.java
+├── model/ # Entités 
+│ ├── Client.java
+│ ├── Commande.java
+│ ├── Stats.java (EnumMap plats)
+│ ├── Horloge.java
+│ └── ...
+├── sim/ # Simulation principale 
+│ └── Restaurant.java # tick(), états, synchronisation
+└── sim.thread/ # Concurrence 
+└── Cuisinier.java # Thread Runnable
+└── utils/ # Outils 
+├── Logger.java
+├── Formatter.java # clientLine() corrigé
+└── Constantes.java
 
 
-## 2. Prérequis
+## Structures de données utilisées
 
-- **Java** : version 21 et plus (recommandé 21).
-- **Maven** installé (`mvn` disponible dans le PATH).
-- IDE recommandé : **IntelliJ IDEA**
+| Structure | Usage | Pourquoi |
+|-----------|--------|----------|
+| `HashMap<Integer, Client>` | Clients présents | Recherche O(1) par ID |
+| `ConcurrentLinkedQueue<Commande>` | File commandes | Thread-safe, FIFO |
+| `synchronizedList<Commande>` | Commandes en prépa | Accès concurrent |
+| `EnumMap<MenuPlat, Integer>` | Stats ventes plats | Parfait pour enum |
 
----
+##  Compilation & Exécution
 
-## 3. Cloner le projet
-
-```bash
-git clone https://github.com/la-sarita/Epreuve_finale_420_311.git
-cd Epreuve_finale_420_311
-
-## 4. Structure du projet
-
-Le projet suit la structure standard Maven :
-```text
-.
-├── pom.xml
-└── src
-    └── main
-        └── java
-            └── mv
-                └── sdd
-                    ├── App.java          # Point d'entrée (main)
-                    ├── model/            # Entités métier (Client, Commande, MenuPlat, Stats, ...)
-                    ├── sim/              # Simulation (Restaurant, Horloge, ...)
-                    │   └── thread/       # Threads (Cuisinier, ...)
-                    ├── io/               # Lecture d'actions, Logger
-                    └── utils/            # Constantes, Formatter, outils divers
-```
-## 5. Scénarios d’exemple
-
-Un fichier de scénario est un simple fichier texte où chaque ligne décrit une action.
-Le dossier data contient deux fichiers exemples.
-
-## 6. Compilation et exécution
-### 6.1 Compiler le projet
-À la racine du projet :
-```bash
+### 1. Compiler
 mvn clean package
-```
+→ Génère `target/2395223-Epreuve_finale_420_311.jar`
 
-Si tout se passe bien, Maven génère un .jar dans target/.
-
-### 6.2 Exécuter l’application
-
-L’application attend deux arguments :
-1. le chemin du fichier de scénario (entrée),
-2. le chemin du fichier de sortie (logs).
-
-Exemple avec Maven :
-```bash
-mvn exec:java -Dexec.mainClass="mv.sdd.App" \
-              -Dexec.args="data/scenario_1.txt data/sortie_1.txt"
-```
-
-> ⚠️ Adaptez mv.sdd.App si votre classe App est dans un autre package.
-
-Après exécution, vous devriez obtenir un fichier data/sortie_1.txt contenant tous les logs de la simulation.
+### 2. Exécuter (comme exigé)
+mvn exec:java -Dexec.mainClass="mv.sdd.App"
+-Dexec.args="data/scenario_1.txt data/sortie_1.txt"
 
 
-## 7. Travail à réaliser
+**OU avec JAR :**
+java -jar target/2395223-Epreuve_finale_420_311.jar
+data/scenario_1.txt data/sortie_1.txt
 
-À partir de ce squelette, vous devez :
-* compléter les méthodes marquées par // TODO ;
-* choisir et utiliser des structures de données appropriées (Map, Queue, List, etc.) ;
-* implémenter la logique de :
-  * gestion des clients et de leur patience,
-  * gestion des commandes et de leurs états,
-  * calcul et affichage des statistiques ;
-* implémenter et utiliser correctement le thread Cuisinier ;
-* gérer le temps simulé via une méthode tick() dans Restaurant (appelée depuis l’action AVANCER_TEMPS) ;
-* produire un log conforme au format demandé (résumés, lignes clients, stats, événements).
 
-## 8. Règles et contraintes
+## Fichiers livrables inclus
 
-* Ne pas supprimer ni renommer les classes ou méthodes déjà utilisées par le squelette sans raison valable.
-* Vous pouvez ajouter :
-  * des méthodes privées ou utilitaires,
-  * des classes supplémentaires si elles respectent l’architecture proposée.
-* Respecter les conventions Java (noms de classes, de méthodes, indentation).
-* Tout ce qui est affiché doit passer par le Logger (pas de System.out.println dispersés dans le code).
+- `data/scenario_simple.txt` (scénario personnel)
+-  `data/sortie_simple.txt` (sortie générée)
+-  `data/scenario_1.txt` → `data/sortie_1.txt` (scénario enseignant)
+-  `target/[TON_DA]-Epreuve_finale_420_311.jar`
 
-## 9. Versionnement (Git / GitHub)
+## 🔗 Dépôt GitHub
+**Repository public** : https://github.com/la-sarita/Epreuve_finale_420_311  
+**Invitée** : sara.boumehraz@cegepmv.ca (au cas où)
 
-* Votre code doit être versionné dans ce dépôt.
-* Ajoutez un fichier README.md (vous pouvez vous basez sur celui-ci) et complétez-le au besoin (notes personnelles, exemples de scénarios, etc.).
-* Si le dépôt est privé, pensez à inviter votre enseignant·e avec l’adresse indiquée dans l’énoncé.
-
-## 10. Aide
-
-* Référez-vous à l’énoncé complet (PDF ou document remis sur Léa).
-* Un document d’aide complémentaire sur les threads (synchronized, wait, notifyAll) peut aussi être fourni.
-
-Bon code, et bon service de midi au resto 🍕🍔🍟 !
+**Projet prêt pour remise !**

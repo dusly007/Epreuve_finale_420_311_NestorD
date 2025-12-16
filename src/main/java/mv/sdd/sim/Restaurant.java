@@ -72,9 +72,9 @@ public class Restaurant {
     public void arreterService(){
         // Votre code ici.
         if (!serviceActif.get()) {
-            return;  //si service terminé -> ne fais rien
+            return;  //si service terminé -> sa fais rien
         }
-        serviceActif.set(false);  // Arrête le cuisinier
+        serviceActif.set(false);
         logger.logLine(String.format("[⏱️ t=%d] Service terminé.", horloge.getTempsSimule()));
 
         if (threadCuisinier != null && threadCuisinier.isAlive()) {
@@ -84,13 +84,12 @@ public class Restaurant {
                 threadCuisinier.interrupt();
             }
         }
-        logger.logLine(Constantes.FOOTER_APP);
     }
 
     // TODO : Déclarer et implémenter les méthodes suivantes
     // tick() avancer commande
     public void tick() {
-        // 1. Diminuer la patience des clients avant tout (car chaque minute passe)
+        //1. diminuer patience client
         synchronized (clients) {
             for (Client client : clients.values()) {
                 if (client.getEtat() == EtatClient.EN_ATTENTE) {
@@ -103,7 +102,7 @@ public class Restaurant {
             }
         }
 
-        // 2. Faire progresser les commandes en préparation
+        //2. fait progresser commandes en prépa
         synchronized (enPreparation) {
             for (Iterator<Commande> it = enPreparation.iterator(); it.hasNext();) {
                 Commande cmd = it.next();
@@ -228,6 +227,5 @@ public class Restaurant {
     //  pour améliorer la lisibilité des méthodes en les découpant au besoin (éviter les trés longues méthodes)
     //  exemple : on peut avoir une méthode diminuerPatienceClients()
     //  qui permet de diminuer la patience des clients (appelée par tick())
-
 
 }

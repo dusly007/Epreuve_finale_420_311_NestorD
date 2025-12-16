@@ -36,6 +36,7 @@
   </dependencies>
 
   <build>
+    <finalName>2395223-Epreuve_finale_420_311</finalName>
     <plugins>
       <!-- COMPILATEUR JAVA 21 -->
       <plugin>

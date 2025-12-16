@@ -70,7 +70,7 @@ public final class Formatter {
             }
         }
         platsStr = platsStr.trim();
-        return String.format(" #%d %s %s (pat=%d, %s)",
+        return String.format("#%d %s %s (pat=%d, %s)",
                 client.getId(),
                 client.getNom(),
                 emojiEtatClient(client.getEtat()),
