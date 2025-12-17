@@ -3,7 +3,7 @@
 **Projet Java console simulant un restaurant pendant le rush de midi.**  
 **Note : Projet complet et fonctionnel, testé avec les scénarios fournis.**
 
-## 📋 Informations étudiantes
+## Informations étudiantes
 
 - **Nom** : Dusly Nestor
 - **DA** : 2395223
@@ -76,10 +76,10 @@ data/scenario_1.txt data/sortie_1.txt
 - `data/scenario_simple.txt` (scénario personnel)
 -  `data/sortie_simple.txt` (sortie générée)
 -  `data/scenario_1.txt` → `data/sortie_1.txt` (scénario enseignant)
--  `target/[TON_DA]-Epreuve_finale_420_311.jar`
+-  `target/2395223-Epreuve_finale_420_311.jar`
 
-## 🔗 Dépôt GitHub
-**Repository public** : https://github.com/la-sarita/Epreuve_finale_420_311  
-**Invitée** : sara.boumehraz@cegepmv.ca (au cas où)
+##  Dépôt GitHub
+**Repository public** : https://github.com/dusly007/Epreuve_finale_420_311_NestorD.git
+**Invitée** : sara.boumehraz@cegepmv.ca 
 
 **Projet prêt pour remise !**
